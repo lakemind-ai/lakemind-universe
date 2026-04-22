@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  root-portal:
+    image: lakemind.ai/root-portal:latest
+    build: ./lakemind-root-portal
+    ports:
+      - "30:80"
+      - "3000:8000"
+    environment:
+      - API_SERVICE_URL=${API_SERVICE_URL:-http://api-service:80/api/}
+      - DATABRICKS_HOST=${DATABRICKS_HOST}
+      - AUTH_PROVIDER=${AUTH_PROVIDER:-databricks}
+      - ROOT_CONFIG_URL=//localhost:30/lakemind-root-config.js
+      - MAIN_PORTAL_URL=//localhost:80/lakemind-main.js
+
+  main-portal:
+    image: lakemind.ai/main-portal:latest
+    build: ./lakemind-main-portal
+    ports:
+      - "80:80"
+      - "8080:8000"
+
+  api-service:
+    image: lakemind.ai/api-service:latest
+    build: ./lakemind-api-service
+    environment:
+      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-local}
+      - DATABRICKS_HOST=${DATABRICKS_HOST}
+      - DATABRICKS_TOKEN=${DATABRICKS_TOKEN}
+      - DATABRICKS_HTTP_PATH=${DATABRICKS_HTTP_PATH}
+      - USE_LOCAL_POSTGRES=true
+      - PGHOST=host.docker.internal
+      - PGPORT=5432
+      - PGDATABASE=lakemind
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+    ports:
+      - "8001:80"

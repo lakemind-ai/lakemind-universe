@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+env/
+*.egg-info
+
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+yarn-error.log
+
+# Docs build
+lakemind-docs/build/
+lakemind-docs/.docusaurus/
+
+# Wheel files (generated at build)
+lakemind-api-service/wheel/*.whl
+
+# Environment
+.env
+!lakemind-root-portal/.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+/tmp/*.pid
+/tmp/*.log
+
+# Alembic
+alembic/__pycache__/

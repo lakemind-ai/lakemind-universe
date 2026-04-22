@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 25% 5%;
+    --foreground: 220 15% 91%;
+
+    --surface: 220 20% 8%;
+    --surface-2: 220 18% 11%;
+
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 12% 55%;
+
+    --popover: 220 20% 8%;
+    --popover-foreground: 220 15% 91%;
+
+    --border: 220 18% 17%;
+    --input: 220 18% 17%;
+
+    --card: 220 20% 8%;
+    --card-foreground: 220 15% 91%;
+
+    --primary: 225 75% 63%;
+    --primary-foreground: 225 75% 95%;
+
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 220 15% 80%;
+
+    --accent: 225 75% 63%;
+    --accent-foreground: 225 75% 95%;
+
+    --destructive: 0 50% 59%;
+    --destructive-foreground: 0 0% 98%;
+
+    --ok: 156 36% 46%;
+    --warn: 37 50% 54%;
+    --err: 0 50% 59%;
+
+    --ring: 225 75% 63%;
+    --radius: 0.375rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+    overflow-x: hidden;
+  }
+}
+
+:root {
+  --font-sans: "Inter", sans-serif;
+  --toastify-color-success: #4A9E7B;
+  --toastify-color-error: #D46A6A;
+}

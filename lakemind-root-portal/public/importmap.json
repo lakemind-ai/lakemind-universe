@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@lakemind/root-config": "//localhost:3000/lakemind-root-config.js",
+    "@lakemind/main-portal": "//localhost:8080/lakemind-main.js"
+  }
+}

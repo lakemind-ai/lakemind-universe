@@ -1,0 +1,52 @@
+{
+  "name": "@lakemind/root-config",
+  "scripts": {
+    "start": "cross-env ROOT_APP_ENV=local webpack serve --port 3000 --env isLocal",
+    "startlocal": "cross-env ROOT_APP_ENV=local webpack serve --port 3000 --env isLocal --no-client-overlay",
+    "startdev": "cross-env ROOT_APP_ENV=development webpack serve --port 3000 --env isLocal",
+    "buildlocaldeploy": "cross-env ROOT_APP_ENV=localdeploy webpack --mode=production",
+    "builddev": "cross-env ROOT_APP_ENV=development webpack --mode=production",
+    "buildproduction": "cross-env ROOT_APP_ENV=production webpack --mode production",
+    "build": "cross-env ROOT_APP_ENV=production webpack --mode production",
+    "test": "cross-env BABEL_ENV=test jest --passWithNoTests",
+    "format": "prettier --write .",
+    "check-format": "prettier --check .",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/eslint-parser": "^7.28.6",
+    "@babel/plugin-transform-runtime": "^7.29.0",
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-typescript": "^7.28.5",
+    "@babel/runtime": "^7.29.2",
+    "concurrently": "^9.2.1",
+    "copy-webpack-plugin": "^14.0.0",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-config-ts-important-stuff": "^1.1.0",
+    "html-webpack-plugin": "^5.6.7",
+    "jest": "^30.3.0",
+    "jest-cli": "^30.3.0",
+    "prettier": "^3.8.3",
+    "serve": "^14.2.4",
+    "ts-config-single-spa": "^3.0.0",
+    "typescript": "^5.8.3",
+    "webpack": "^5.106.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-config-single-spa-ts": "^4.0.0",
+    "webpack-dev-server": "^5.2.3",
+    "webpack-merge": "^6.0.1"
+  },
+  "dependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/systemjs": "^6.15.4",
+    "@types/webpack-env": "^1.18.8",
+    "dotenv": "^16.5.0",
+    "single-spa": "^6.0.3",
+    "single-spa-layout": "^3.0.0"
+  },
+  "types": "dist/lakemind-root-config.d.ts"
+}

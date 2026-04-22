@@ -1,0 +1,15 @@
+LakeMind Alembic Migration Environment
+
+Commands (run from lakemind-api-service/):
+
+  # Generate a new migration
+  alembic revision --autogenerate -m "describe_change"
+
+  # Apply migrations
+  alembic upgrade head
+
+  # Downgrade one step
+  alembic downgrade -1
+
+  # Check current revision
+  alembic current

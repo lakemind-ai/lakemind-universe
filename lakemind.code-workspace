@@ -1,0 +1,49 @@
+{
+  "folders": [
+    {
+      "name": "lakemind-root-portal (Root Config)",
+      "path": "lakemind-root-portal"
+    },
+    {
+      "name": "lakemind-main-portal (Main MFE)",
+      "path": "lakemind-main-portal"
+    },
+    {
+      "name": "lakemind-api-service (FastAPI Backend)",
+      "path": "lakemind-api-service"
+    },
+    {
+      "name": "lakemind-docs (Docusaurus)",
+      "path": "lakemind-docs"
+    },
+    {
+      "name": "root",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder:lakemind-api-service (FastAPI Backend)}/venv/bin/python",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.black-formatter",
+      "esbenp.prettier-vscode",
+      "bradlc.vscode-tailwindcss",
+      "ms-azuretools.vscode-docker"
+    ]
+  }
+}
