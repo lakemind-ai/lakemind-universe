@@ -5,34 +5,86 @@ from datetime import datetime, timezone
 
 
 class CatalogScan(Base):
-    """A recorded scan of a Unity Catalog catalog."""
+    """A recorded scan of a Unity Catalog catalog/schema."""
     __tablename__ = "catalog_scans"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     catalog_name = Column(String(255), nullable=False)
+    schema_name = Column(String(255), nullable=True)
+    scan_type = Column(String(50), nullable=False, default="schema")  # catalog | schema
+    warehouse_id = Column(String(255), nullable=True)
+    model_endpoint = Column(String(255), nullable=True)
     status = Column(String(50), nullable=False, default="pending")  # pending | scanning | complete | failed
+    status_message = Column(Text, nullable=True)
     schema_count = Column(Integer, nullable=True)
     table_count = Column(Integer, nullable=True)
     column_count = Column(Integer, nullable=True)
     entity_count = Column(Integer, nullable=True)
+    proposal_count = Column(Integer, nullable=True)
     created_by = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at = Column(DateTime, nullable=True)
 
     entities = relationship("DetectedEntity", back_populates="scan", cascade="all, delete-orphan")
+    proposals = relationship("ScanProposal", back_populates="scan", cascade="all, delete-orphan")
 
     def to_json(self):
         return {
             "id": self.id,
             "catalog_name": self.catalog_name,
+            "schema_name": self.schema_name,
+            "scan_type": self.scan_type,
+            "warehouse_id": self.warehouse_id,
+            "model_endpoint": self.model_endpoint,
             "status": self.status,
+            "status_message": self.status_message,
             "schema_count": self.schema_count,
             "table_count": self.table_count,
             "column_count": self.column_count,
             "entity_count": self.entity_count,
+            "proposal_count": self.proposal_count,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+class ScanProposal(Base):
+    """An AI-proposed entity grouping from a MindScan, reviewable by the user."""
+    __tablename__ = "scan_proposals"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    scan_id = Column(Integer, ForeignKey("catalog_scans.id", ondelete="CASCADE"), nullable=False)
+    entity_id = Column(Integer, ForeignKey("detected_entities.id", ondelete="SET NULL"), nullable=True)
+    proposed_name = Column(String(255), nullable=False)
+    proposed_description = Column(Text, nullable=True)
+    table_names = Column(Text, nullable=True)  # JSON array of full table names
+    confidence_score = Column(Float, nullable=True)
+    status = Column(String(50), nullable=False, default="proposed")  # proposed | accepted | rejected | edited
+    review_notes = Column(Text, nullable=True)
+    reviewed_by = Column(String(255), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    scan = relationship("CatalogScan", back_populates="proposals")
+    glossary_entries = relationship("GlossaryEntry", back_populates="proposal", cascade="all, delete-orphan")
+
+    def to_json(self):
+        import json as _json
+        return {
+            "id": self.id,
+            "scan_id": self.scan_id,
+            "entity_id": self.entity_id,
+            "proposed_name": self.proposed_name,
+            "proposed_description": self.proposed_description,
+            "table_names": _json.loads(self.table_names) if self.table_names else [],
+            "confidence_score": self.confidence_score,
+            "status": self.status,
+            "review_notes": self.review_notes,
+            "reviewed_by": self.reviewed_by,
+            "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "glossary_entries": [e.to_json() for e in self.glossary_entries] if self.glossary_entries else [],
         }
 
 

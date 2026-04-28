@@ -1,42 +1,61 @@
-import React, { useEffect, useState } from "react";
-import { useHistory } from "react-router-dom";
-import {
-  Search,
-  Database,
-  Table2,
-  Columns3,
-  BarChart3,
-  ChevronRight,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  Filter,
-  RefreshCw,
-  Sparkles,
-  ArrowRight,
-} from "lucide-react";
-import ScanService, { CatalogScan, DetectedEntity } from "@/services/scanservice";
+import { Loader } from "@/components/reusable/loader";
+import { useResources } from "@/lib/resource-context";
 import CatalogService from "@/services/catalogservice";
-import { cn } from "@/lib/utils";
-
-const statusConfig = {
-  draft: { label: "Draft", color: "text-[#6B7589]", bg: "bg-[#6B7589]/10", icon: Clock },
-  needs_review: { label: "Needs review", color: "text-[#C69A4C]", bg: "bg-[#C69A4C]/10", icon: AlertCircle },
-  approved: { label: "Approved", color: "text-[#4A9E7B]", bg: "bg-[#4A9E7B]/10", icon: CheckCircle2 },
-};
-
-type FilterType = "all" | "needs_review" | "approved";
+import ScanService, { CatalogScan, ScanProposal } from "@/services/scanservice";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  RefreshCw,
+  X,
+  XCircle,
+  Cpu,
+  DatabaseZap,
+  Table2,
+  Boxes,
+  FileText,
+  Layers,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
+import { ProposalCard } from "./ProposalCard";
+import { PageHeader } from "@/components/reusable/page-header";
+import { Dialog } from "@/components/reusable/dialog";
+import { useUrlState } from "@/lib/use-url-state";
 
 export function ScanPage() {
-  const history = useHistory();
+  const { getParam, getParamNumber, setParam, setParams } = useUrlState();
+  const {
+    selectedWarehouse,
+    selectedEndpoint,
+    loading: resourcesLoading,
+  } = useResources();
+
   const [catalogs, setCatalogs] = useState<string[]>([]);
-  const [selectedCatalog, setSelectedCatalog] = useState<string>("");
-  const [scan, setScan] = useState<CatalogScan | null>(null);
-  const [entities, setEntities] = useState<DetectedEntity[]>([]);
-  const [selectedEntity, setSelectedEntity] = useState<DetectedEntity | null>(null);
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [selectedCatalog, setSelectedCatalog] = useState("");
+  const [schemas, setSchemas] = useState<string[]>([]);
+  const [selectedSchemas, setSelectedSchemas] = useState<string[]>([]);
+  const [schemaDropdownOpen, setSchemaDropdownOpen] = useState(false);
+  const schemaDropdownRef = useRef<HTMLDivElement>(null);
+
   const [scanning, setScanning] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [scanHistory, setScanHistory] = useState<CatalogScan[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // Proposal dialog
+  // URL-driven proposal dialog
+  const urlScanId = getParamNumber("scan");
+  const [proposalDialogOpen, setProposalDialogOpenState] = useState(!!urlScanId);
+  const [proposalScan, setProposalScan] = useState<CatalogScan | null>(null);
+  const setProposalDialogOpen = (open: boolean) => {
+    setProposalDialogOpenState(open);
+    if (!open) setParam("scan", null);
+  };
+  const [proposals, setProposals] = useState<ScanProposal[]>([]);
+  const [loadingProposals, setLoadingProposals] = useState(false);
+  const [expandedProposals, setExpandedProposals] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     CatalogService.getCatalogs()
@@ -44,383 +63,443 @@ export function ScanPage() {
         setCatalogs(data);
         if (data.length > 0) setSelectedCatalog(data[0]);
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => {});
+    loadScanHistory();
   }, []);
+
+  // Restore proposal dialog from URL
+  useEffect(() => {
+    if (urlScanId && scanHistory.length > 0 && !proposalScan) {
+      const scan = scanHistory.find((s) => s.id === urlScanId);
+      if (scan) openProposals(scan);
+    }
+  }, [urlScanId, scanHistory]);
+
+  const loadScanHistory = () => {
+    setLoadingHistory(true);
+    ScanService.getScans()
+      .then((data) => {
+        // Sort: scanning first, then complete (actionable), then rest
+        const sorted = [...data].sort((a, b) => {
+          const priority = (s: CatalogScan) => {
+            if (s.status === "scanning") return 0;
+            if (s.status === "complete") return 1;
+            if (s.status === "failed") return 3;
+            return 2;
+          };
+          return priority(a) - priority(b);
+        });
+        setScanHistory(sorted);
+        setLoadingHistory(false);
+      })
+      .catch(() => setLoadingHistory(false));
+  };
 
   useEffect(() => {
     if (!selectedCatalog) return;
-    setLoading(true);
-    ScanService.getScans()
-      .then((scans) => {
-        const latest = scans.find((s) => s.catalog === selectedCatalog);
-        if (latest) {
-          setScan(latest);
-          setEntities(latest.entities || []);
-          if (latest.entities?.length > 0) setSelectedEntity(latest.entities[0]);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    setSchemas([]);
+    setSelectedSchemas([]);
+    CatalogService.getSchemas(selectedCatalog).then(setSchemas).catch(() => {});
   }, [selectedCatalog]);
 
-  const handleScan = async () => {
-    if (!selectedCatalog) return;
-    setScanning(true);
-    try {
-      const result = await ScanService.scanCatalog(selectedCatalog);
-      setScan(result);
-      setEntities(result.entities || []);
-      if (result.entities?.length > 0) setSelectedEntity(result.entities[0]);
-    } catch {}
-    setScanning(false);
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (schemaDropdownRef.current && !schemaDropdownRef.current.contains(e.target as Node)) {
+        setSchemaDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Poll for any scanning items
+  useEffect(() => {
+    const scanningItems = scanHistory.filter((s) => s.status === "scanning");
+    if (scanningItems.length === 0) return;
+
+    const interval = setInterval(async () => {
+      let changed = false;
+      for (const scan of scanningItems) {
+        try {
+          const status = await ScanService.getMindScanStatus(scan.id);
+          if (status.status !== "scanning") {
+            changed = true;
+            if (status.status === "complete") {
+              toast.success(`Scan complete: ${status.entity_count || 0} entities found`);
+            } else if (status.status === "failed") {
+              toast.error(`Scan failed: ${status.status_message}`);
+            }
+          }
+        } catch {}
+      }
+      if (changed) loadScanHistory();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [scanHistory]);
+
+  const toggleSchema = (schema: string) => {
+    setSelectedSchemas((prev) =>
+      prev.includes(schema) ? prev.filter((s) => s !== schema) : [...prev, schema]
+    );
   };
 
-  const filteredEntities = entities.filter((e) => {
-    if (filter === "all") return true;
-    return e.status === filter;
-  });
+  const selectAllSchemas = () => {
+    setSelectedSchemas(selectedSchemas.length === schemas.length ? [] : [...schemas]);
+  };
 
-  const groupedBySchema = filteredEntities.reduce<Record<string, DetectedEntity[]>>((acc, entity) => {
-    const schema = entity.schema || "default";
-    if (!acc[schema]) acc[schema] = [];
-    acc[schema].push(entity);
-    return acc;
-  }, {});
+  const handleScan = async () => {
+    if (!selectedCatalog || selectedSchemas.length === 0) {
+      toast.warning("Select a catalog and at least one schema");
+      return;
+    }
+    if (!selectedWarehouse) {
+      toast.warning("Select a SQL Warehouse from Resources");
+      return;
+    }
+    if (!selectedEndpoint) {
+      toast.warning("Select an AI Model from Resources");
+      return;
+    }
 
-  const filterButtons: { key: FilterType; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "needs_review", label: "Needs review" },
-    { key: "approved", label: "Approved" },
-  ];
+    setScanning(true);
+    try {
+      await ScanService.startMindScan(
+        selectedCatalog,
+        selectedSchemas,
+        selectedWarehouse.id,
+        selectedEndpoint.name
+      );
+      toast.info("Scan started — tracking progress...");
+      loadScanHistory();
+    } catch (err: any) {
+      toast.error(err?.message || "Scan failed to start");
+    } finally {
+      setScanning(false);
+    }
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5B7FE8]" />
-      </div>
-    );
-  }
+  const openProposals = async (scan: CatalogScan) => {
+    setProposalScan(scan);
+    setParam("scan", scan.id);
+    setProposalDialogOpenState(true);
+    setLoadingProposals(true);
+    setExpandedProposals(new Set());
+    try {
+      const data = await ScanService.getMindScanProposals(scan.id);
+      setProposals(data);
+    } catch {
+      toast.error("Failed to load proposals");
+    } finally {
+      setLoadingProposals(false);
+    }
+  };
+
+  const handleAccept = useCallback(async (proposalId: number) => {
+    if (!proposalScan) return;
+    try {
+      const updated = await ScanService.acceptProposal(proposalScan.id, proposalId);
+      setProposals((prev) => prev.map((p) => (p.id === proposalId ? updated : p)));
+      toast.success("Entity accepted");
+    } catch {
+      toast.error("Failed to accept proposal");
+    }
+  }, [proposalScan]);
+
+  const handleReject = useCallback(async (proposalId: number) => {
+    if (!proposalScan) return;
+    try {
+      const updated = await ScanService.rejectProposal(proposalScan.id, proposalId);
+      setProposals((prev) => prev.map((p) => (p.id === proposalId ? updated : p)));
+      toast.info("Entity rejected");
+    } catch {
+      toast.error("Failed to reject proposal");
+    }
+  }, [proposalScan]);
+
+  const toggleExpand = (proposalId: number) => {
+    setExpandedProposals((prev) => {
+      const next = new Set(Array.from(prev));
+      next.has(proposalId) ? next.delete(proposalId) : next.add(proposalId);
+      return next;
+    });
+  };
+
+  const scanStatusConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+    scanning: { label: "Scanning", color: "text-[#3B6B96]", bg: "bg-[#1E3A5F]/10", icon: RefreshCw },
+    complete: { label: "Complete", color: "text-[#4A9E7B]", bg: "bg-[#4A9E7B]/10", icon: CheckCircle2 },
+    failed: { label: "Failed", color: "text-[#D46A6A]", bg: "bg-[#D46A6A]/10", icon: XCircle },
+    pending: { label: "Pending", color: "text-[#718096]", bg: "bg-[#718096]/10", icon: Clock },
+  };
 
   return (
-    <div className="flex gap-0 h-full min-h-0">
-      {/* Left sidebar */}
-      <div className="w-80 shrink-0 border-r border-[#232B38] flex flex-col bg-[#0B0E14] overflow-hidden">
-        {/* Catalog selector */}
-        <div className="p-4 border-b border-[#232B38]">
-          <label className="text-xs text-[#6B7589] font-medium uppercase tracking-wider mb-2 block">Catalog</label>
-          <div className="flex gap-2">
-            <select
-              value={selectedCatalog}
-              onChange={(e) => setSelectedCatalog(e.target.value)}
-              className="flex-1 bg-[#11151C] border border-[#232B38] text-[#E6EAF0] text-sm rounded-md px-3 py-1.5 focus:outline-none focus:border-[#5B7FE8]"
-            >
-              {catalogs.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+    <div className="flex flex-col h-full">
+      <PageHeader
+        icon={<DatabaseZap className="w-7 h-7" />}
+        title="MindScan"
+        subtitle="Scan Unity Catalog schemas and let AI classify entities, tables, and glossary terms."
+      />
+      <div className="flex flex-col gap-5 p-6 flex-1 overflow-auto">
+
+        {/* Scan Configuration */}
+        <div className="border border-[#E2E8F0] rounded-lg p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-[#1A2332]">New Scan</h2>
+              <p className="text-xs text-[#718096] mt-0.5">Select a catalog and schemas to analyze.</p>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-[#718096]">
+              {selectedWarehouse && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F0F2F5]">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>{selectedWarehouse.name}</span>
+                </div>
+              )}
+              {selectedEndpoint && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F0F2F5]">
+                  <Cpu className="w-3 h-3 text-[#C69A4C]" />
+                  <span>{selectedEndpoint.name}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-[#A0AEC0] uppercase tracking-wider">Catalog</label>
+              <select
+                value={selectedCatalog}
+                onChange={(e) => setSelectedCatalog(e.target.value)}
+                className="bg-white border border-[#E2E8F0] rounded-md px-3 py-2 text-sm text-[#1A2332] focus:border-[#1E3A5F] outline-none min-w-[200px]"
+              >
+                {catalogs.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1 relative" ref={schemaDropdownRef}>
+              <label className="text-xs font-semibold text-[#A0AEC0] uppercase tracking-wider">Schemas</label>
+              <button
+                onClick={() => setSchemaDropdownOpen(!schemaDropdownOpen)}
+                disabled={schemas.length === 0}
+                className="flex items-center justify-between bg-white border border-[#E2E8F0] rounded-md px-3 py-2 text-sm text-[#1A2332] focus:border-[#1E3A5F] outline-none min-w-[240px] disabled:opacity-50"
+              >
+                <span className="truncate">
+                  {selectedSchemas.length === 0 ? "Select schemas..."
+                    : selectedSchemas.length === schemas.length ? "All schemas"
+                    : `${selectedSchemas.length} selected`}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#718096] shrink-0 ml-2" />
+              </button>
+              {schemaDropdownOpen && schemas.length > 0 && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-[#E2E8F0] rounded-lg shadow-xl z-50 py-1 max-h-56 overflow-y-auto">
+                  <button onClick={selectAllSchemas} className="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-[#F5F7FA] transition-colors border-b border-[#E2E8F0]">
+                    <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
+                      selectedSchemas.length === schemas.length ? "bg-[#1E3A5F] border-[#1E3A5F]"
+                        : selectedSchemas.length > 0 ? "border-[#1E3A5F] bg-[#1E3A5F]/30" : "border-[#CBD5E0]"
+                    }`}>
+                      {selectedSchemas.length > 0 && <Check className="w-2.5 h-2.5 text-white" />}
+                    </div>
+                    <span className="text-sm text-[#4A5568] font-medium">Select All</span>
+                  </button>
+                  {schemas.map((s) => (
+                    <button key={s} onClick={() => toggleSchema(s)} className="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-[#F5F7FA] transition-colors">
+                      <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
+                        selectedSchemas.includes(s) ? "bg-[#1E3A5F] border-[#1E3A5F]" : "border-[#CBD5E0]"
+                      }`}>
+                        {selectedSchemas.includes(s) && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className="text-sm text-[#1A2332]">{s}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleScan}
-              disabled={scanning}
-              className="px-3 py-1.5 bg-[#5B7FE8] hover:bg-[#4A6ED4] text-white text-sm rounded-md transition-colors disabled:opacity-60 flex items-center gap-1"
+              disabled={scanning || !selectedCatalog || selectedSchemas.length === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-md bg-[#1E3A5F] text-white text-sm font-medium hover:bg-[#162D4A] transition-colors disabled:opacity-50"
             >
-              {scanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+              {scanning ? <><RefreshCw className="w-4 h-4 animate-spin" /> Starting...</> : <><DatabaseZap className="w-4 h-4" /> Scan Now</>}
             </button>
           </div>
         </div>
 
-        {/* Scan summary */}
-        {scan && (
-          <div className="px-4 py-3 border-b border-[#232B38]">
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { icon: Database, label: "Schemas", value: scan.schema_count },
-                { icon: Table2, label: "Tables", value: scan.table_count },
-                { icon: Sparkles, label: "Entities", value: scan.entity_count },
-                { icon: Columns3, label: "Columns", value: scan.column_count },
-              ].map((stat) => (
-                <div key={stat.label} className="flex items-center gap-2 text-xs">
-                  <stat.icon className="w-3.5 h-3.5 text-[#6B7589]" />
-                  <span className="text-[#6B7589]">{stat.label}</span>
-                  <span className="text-[#E6EAF0] font-medium ml-auto">{stat.value}</span>
-                </div>
-              ))}
-            </div>
+        {/* No resources warning */}
+        {(!selectedWarehouse || !selectedEndpoint) && !resourcesLoading && (
+          <div className="flex items-center gap-3 bg-[#C69A4C]/10 border border-[#C69A4C]/25 rounded-lg px-4 py-3">
+            <AlertCircle className="w-4 h-4 text-[#C69A4C] shrink-0" />
+            <span className="text-sm text-[#C69A4C]">Select a SQL Warehouse and AI Model from the sidebar Resources section before scanning.</span>
           </div>
         )}
 
-        {/* Filter chips */}
-        <div className="px-4 py-3 border-b border-[#232B38] flex gap-1.5">
-          {filterButtons.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                filter === f.key
-                  ? "bg-[#5B7FE8]/15 text-[#5B7FE8]"
-                  : "text-[#6B7589] hover:bg-[#1A1F2B] hover:text-[#A9B1BE]"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        {/* Scan History */}
+        <div>
+          <h2 className="text-sm font-semibold text-[#1A2332] mb-3">
+            Scan History
+            {scanHistory.length > 0 && (
+              <span className="ml-1.5 text-xs font-normal text-[#A0AEC0]">({scanHistory.length})</span>
+            )}
+          </h2>
 
-        {/* Entity tree */}
-        <div className="flex-1 overflow-y-auto px-2 py-2">
-          {Object.entries(groupedBySchema).map(([schema, schemaEntities]) => (
-            <div key={schema} className="mb-3">
-              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#6B7589]">
-                {schema}
+          {loadingHistory ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader size="medium" message="Loading scans..." textClassName="mt-3 text-sm text-[#718096]" />
+            </div>
+          ) : scanHistory.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-[#1E3A5F]/10 flex items-center justify-center mb-4">
+                <DatabaseZap className="w-8 h-8 text-[#3B6B96]" />
               </div>
-              {schemaEntities.map((entity) => {
-                const isSelected = selectedEntity?.id === entity.id;
-                const status = statusConfig[entity.status] || statusConfig.draft;
-                const StatusIcon = status.icon;
+              <h3 className="text-base font-semibold text-[#1A2332] mb-1">Ready to discover entities</h3>
+              <p className="text-sm text-[#718096] max-w-md">
+                Select a catalog and schema above, then click <strong>Scan Now</strong> to let AI analyze your tables and propose business entities.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {scanHistory.map((scan) => {
+                const cfg = scanStatusConfig[scan.status] || scanStatusConfig.pending;
+                const StatusIcon = cfg.icon;
+                const isActionable = scan.status === "complete";
+                const isScanning = scan.status === "scanning";
+
                 return (
-                  <button
-                    key={entity.id}
-                    onClick={() => setSelectedEntity(entity)}
-                    className={cn(
-                      "w-full text-left px-3 py-2.5 rounded-lg mb-1 transition-colors",
-                      isSelected ? "bg-[#5B7FE8]/10 border border-[#5B7FE8]/30" : "hover:bg-[#11151C] border border-transparent"
-                    )}
+                  <div
+                    key={scan.id}
+                    className={`border rounded-lg p-4 transition-colors ${
+                      isActionable ? "border-[#1E3A5F]/30 bg-[#1E3A5F]/[0.02]" : "border-[#E2E8F0]"
+                    }`}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-[#E6EAF0] truncate">{entity.name}</span>
-                      <span className={cn("flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded", status.bg, status.color)}>
-                        <StatusIcon className="w-3 h-3" />
-                        {status.label}
-                      </span>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-9 h-9 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0 mt-0.5`}>
+                          <StatusIcon className={`w-4 h-4 ${cfg.color} ${isScanning ? "animate-spin" : ""}`} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-semibold text-[#1A2332]">{scan.catalog_name}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${cfg.bg} ${cfg.color}`}>{cfg.label}</span>
+                          </div>
+                          <p className="text-xs text-[#718096] mb-2">
+                            {scan.schema_name || "All schemas"}
+                          </p>
+                          {scan.status_message && isScanning && (
+                            <p className="text-xs text-[#3B6B96] italic">{scan.status_message}</p>
+                          )}
+                          <div className="flex items-center gap-4 text-xs text-[#A0AEC0]">
+                            {scan.table_count != null && (
+                              <div className="flex items-center gap-1">
+                                <Table2 className="w-3 h-3" />
+                                <span>{scan.table_count} tables</span>
+                              </div>
+                            )}
+                            {scan.entity_count != null && (
+                              <div className="flex items-center gap-1">
+                                <Boxes className="w-3 h-3" />
+                                <span>{scan.entity_count} entities</span>
+                              </div>
+                            )}
+                            {scan.proposal_count != null && (
+                              <div className="flex items-center gap-1">
+                                <FileText className="w-3 h-3" />
+                                <span>{scan.proposal_count} proposals</span>
+                              </div>
+                            )}
+                            <span>
+                              {scan.created_at ? new Date(scan.created_at).toLocaleString() : ""}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isActionable && (
+                          <button
+                            onClick={() => openProposals(scan)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1E3A5F] text-white text-sm font-medium hover:bg-[#162D4A] transition-colors"
+                          >
+                            <Layers className="w-3.5 h-3.5" /> Review Proposals
+                          </button>
+                        )}
+                        {isScanning && (
+                          <span className="text-xs text-[#3B6B96] font-medium">In progress...</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-[10px] text-[#6B7589]">
-                      <span>{entity.table_count} tables</span>
-                      <span>{entity.column_count} cols</span>
-                      <span>{entity.metric_count} metrics</span>
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
-          ))}
-          {filteredEntities.length === 0 && (
-            <div className="text-center py-8 text-sm text-[#6B7589]">
-              {scan ? "No entities match the current filter" : "Run a scan to detect entities"}
-            </div>
           )}
         </div>
       </div>
 
-      {/* Right main area */}
-      <div className="flex-1 overflow-y-auto bg-[#0B0E14] p-6">
-        {selectedEntity ? (
-          <EntityDetail entity={selectedEntity} onNavigate={(id) => history.push(`/entity/${id}`)} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-[#6B7589]">
-            <Search className="w-12 h-12 mb-4 opacity-30" />
-            <p className="text-sm">Select an entity to view details</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface EntityDetailProps {
-  entity: DetectedEntity;
-  onNavigate: (id: string) => void;
-}
-
-function EntityDetail({ entity, onNavigate }: EntityDetailProps) {
-  const status = statusConfig[entity.status] || statusConfig.draft;
-  const StatusIcon = status.icon;
-
-  const confidencePercent = Math.round((entity.confidence || 0) * 100);
-
-  return (
-    <div className="max-w-4xl">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-[#6B7589] mb-4">
-        <span>Scan</span>
-        <ChevronRight className="w-3 h-3" />
-        <span>{entity.schema}</span>
-        <ChevronRight className="w-3 h-3" />
-        <span className="text-[#E6EAF0]">{entity.name}</span>
-      </div>
-
-      {/* Title row */}
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-xl font-semibold text-[#E6EAF0]">{entity.name}</h1>
-        <span className={cn("flex items-center gap-1 text-xs px-2 py-1 rounded-md", status.bg, status.color)}>
-          <StatusIcon className="w-3.5 h-3.5" />
-          {status.label}
-        </span>
-        <button
-          onClick={() => onNavigate(entity.id)}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-[#5B7FE8] hover:bg-[#4A6ED4] text-white text-sm rounded-md transition-colors"
-        >
-          Edit entity
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
-        {[
-          { icon: Table2, label: "Tables", value: entity.table_count, color: "#5B7FE8" },
-          { icon: Columns3, label: "Columns", value: entity.column_count, color: "#5B7FE8" },
-          { icon: BarChart3, label: "Metrics", value: entity.metric_count, color: "#5B7FE8" },
-          { icon: Sparkles, label: "Confidence", value: `${confidencePercent}%`, color: confidencePercent >= 80 ? "#4A9E7B" : confidencePercent >= 50 ? "#C69A4C" : "#D46A6A" },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-[#11151C] border border-[#232B38] rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
-              <span className="text-xs text-[#6B7589]">{stat.label}</span>
-            </div>
-            <span className="text-lg font-semibold text-[#E6EAF0]">{stat.value}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Entity card with AI description */}
-      <div className="bg-[#11151C] border border-[#232B38] rounded-lg p-5 mb-6">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-[#5B7FE8]/10 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-[#5B7FE8]" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-medium text-[#E6EAF0] mb-1">AI-Generated Description</h3>
-            <p className="text-sm text-[#A9B1BE] leading-relaxed">
-              {entity.description || "LakeMind will generate a description after scanning the entity tables and columns."}
-            </p>
-          </div>
-        </div>
-        {/* Confidence bar */}
-        <div className="mt-3">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-[#6B7589]">Detection confidence</span>
-            <span className="text-[#E6EAF0] font-medium">{confidencePercent}%</span>
-          </div>
-          <div className="w-full h-1.5 bg-[#1A1F2B] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{
-                width: `${confidencePercent}%`,
-                backgroundColor: confidencePercent >= 80 ? "#4A9E7B" : confidencePercent >= 50 ? "#C69A4C" : "#D46A6A",
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Tables list */}
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-[#E6EAF0] mb-3 flex items-center gap-2">
-          <Table2 className="w-4 h-4 text-[#5B7FE8]" />
-          Detected Tables
-        </h3>
-        <div className="space-y-2">
-          {(entity.tables || []).map((table) => {
-            const tableStatus = statusConfig[table.status] || statusConfig.draft;
-            const TableStatusIcon = tableStatus.icon;
-            return (
-              <div key={table.id} className="bg-[#11151C] border border-[#232B38] rounded-lg px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Database className="w-4 h-4 text-[#6B7589]" />
-                  <div>
-                    <span className="text-sm font-medium text-[#E6EAF0]">{table.name}</span>
-                    <span className="text-xs text-[#6B7589] ml-2">{table.full_name}</span>
+      {/* Proposals Dialog */}
+      <Dialog open={proposalDialogOpen} onClose={() => setProposalDialogOpen(false)} className="w-full max-w-3xl max-h-[85vh] flex flex-col">
+            {/* Dialog header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8F0] shrink-0">
+              <div>
+                <h2 className="text-base font-bold text-[#1A2332]">
+                  AI Proposals — {proposalScan?.catalog_name}
+                </h2>
+                <p className="text-xs text-[#718096]">
+                  {proposalScan?.schema_name} · {proposals.length} entities proposed
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {proposals.length > 0 && (
+                  <div className="flex gap-2 text-xs">
+                    <span className="text-[#4A9E7B]">{proposals.filter((p) => p.status === "accepted").length} accepted</span>
+                    <span className="text-[#718096]">·</span>
+                    <span className="text-[#D46A6A]">{proposals.filter((p) => p.status === "rejected").length} rejected</span>
+                    <span className="text-[#718096]">·</span>
+                    <span>{proposals.filter((p) => p.status === "proposed").length} pending</span>
                   </div>
+                )}
+                <button onClick={() => setProposalDialogOpen(false)} className="p-1.5 rounded-md text-[#A0AEC0] hover:text-[#4A5568] hover:bg-[#F0F2F5] transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Dialog body */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {loadingProposals ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader size="medium" message="Loading proposals..." textClassName="mt-3 text-sm text-[#718096]" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-[#6B7589]">{table.column_count} columns</span>
-                  <span className={cn("flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded", tableStatus.bg, tableStatus.color)}>
-                    <TableStatusIcon className="w-3 h-3" />
-                  </span>
+              ) : proposals.length === 0 ? (
+                <div className="text-center py-12 text-sm text-[#718096]">No proposals found for this scan.</div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {proposals.map((p) => (
+                    <ProposalCard
+                      key={p.id}
+                      proposal={p}
+                      onAccept={handleAccept}
+                      onReject={handleReject}
+                      expanded={expandedProposals.has(p.id)}
+                      onToggleExpand={() => toggleExpand(p.id)}
+                    />
+                  ))}
                 </div>
-              </div>
-            );
-          })}
-          {(!entity.tables || entity.tables.length === 0) && (
-            <div className="text-center py-4 text-sm text-[#6B7589] bg-[#11151C] border border-[#232B38] rounded-lg">
-              No tables detected yet
+              )}
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Proposed metrics section */}
-      <div>
-        <h3 className="text-sm font-semibold text-[#E6EAF0] mb-3 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-[#5B7FE8]" />
-          Proposed Metrics
-        </h3>
-        <div className="space-y-3">
-          {/* Placeholder metric blocks since we get them from entity detail */}
-          <div className="bg-[#11151C] border border-[#232B38] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#5B7FE8]" />
-                <span className="text-sm font-medium text-[#E6EAF0]">total_revenue</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5B7FE8]/10 text-[#5B7FE8]">measure</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#6B7589]">92% confidence</span>
-                <button className="text-xs px-2 py-1 rounded bg-[#4A9E7B]/10 text-[#4A9E7B] hover:bg-[#4A9E7B]/20 transition-colors">
-                  Approve
-                </button>
-              </div>
+            {/* Dialog footer */}
+            <div className="flex items-center justify-between px-6 py-3 border-t border-[#E2E8F0] shrink-0">
+              <span className="text-xs text-[#A0AEC0]">
+                Accepted entities will appear in Entity Hub.
+              </span>
+              <button
+                onClick={() => setProposalDialogOpen(false)}
+                className="px-4 py-2 rounded-md text-sm text-[#718096] hover:bg-[#F0F2F5] transition-colors"
+              >
+                Close
+              </button>
             </div>
-            <p className="text-xs text-[#A9B1BE] mb-2">Sum of all transaction amounts for the entity</p>
-            <div className="bg-[#0B0E14] rounded px-3 py-2 text-xs font-mono text-[#A9B1BE]">
-              SUM(transactions.amount)
-            </div>
-          </div>
-
-          <div className="bg-[#11151C] border border-[#232B38] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#5B7FE8]" />
-                <span className="text-sm font-medium text-[#E6EAF0]">avg_order_value</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#C69A4C]/10 text-[#C69A4C]">calculated</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#6B7589]">78% confidence</span>
-                <button className="text-xs px-2 py-1 rounded bg-[#4A9E7B]/10 text-[#4A9E7B] hover:bg-[#4A9E7B]/20 transition-colors">
-                  Approve
-                </button>
-              </div>
-            </div>
-            <p className="text-xs text-[#A9B1BE] mb-2">Average transaction amount per order</p>
-            <div className="bg-[#0B0E14] rounded px-3 py-2 text-xs font-mono text-[#A9B1BE]">
-              AVG(transactions.amount)
-            </div>
-          </div>
-
-          <div className="bg-[#11151C] border border-[#232B38] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#5B7FE8]" />
-                <span className="text-sm font-medium text-[#E6EAF0]">customer_count</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5B7FE8]/10 text-[#5B7FE8]">measure</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#6B7589]">85% confidence</span>
-                <button className="text-xs px-2 py-1 rounded bg-[#4A9E7B]/10 text-[#4A9E7B] hover:bg-[#4A9E7B]/20 transition-colors">
-                  Approve
-                </button>
-              </div>
-            </div>
-            <p className="text-xs text-[#A9B1BE] mb-2">Count of distinct customers</p>
-            <div className="bg-[#0B0E14] rounded px-3 py-2 text-xs font-mono text-[#A9B1BE]">
-              COUNT(DISTINCT customers.customer_id)
-            </div>
-          </div>
-        </div>
-      </div>
+      </Dialog>
     </div>
   );
 }

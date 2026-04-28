@@ -228,11 +228,11 @@ cp lakemind-api-service/.env.example lakemind-api-service/.env
 make ui-install
 
 # 4. Start everything
-make backend-start    # Terminal 1 — API on :8001
-make ui-start         # Terminal 2 — Root on :3000, Main on :8080
+make backend-start    # Terminal 1 — API on :9000
+make ui-start         # Terminal 2 — Root on :3003, Main on :9090
 
 # 5. Access
-open http://localhost:3000
+open http://localhost:3003
 ```
 
 ---

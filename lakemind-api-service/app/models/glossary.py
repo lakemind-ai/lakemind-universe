@@ -1,6 +1,49 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey
+from sqlalchemy.orm import relationship
 from app.utils.database import Base
 from datetime import datetime, timezone
+
+
+class GlossaryEntry(Base):
+    """A unified glossary entry — definition, metric, or dimension — proposed or committed."""
+    __tablename__ = "glossary_entries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    proposal_id = Column(Integer, ForeignKey("scan_proposals.id", ondelete="CASCADE"), nullable=True)
+    entity_id = Column(Integer, ForeignKey("detected_entities.id", ondelete="SET NULL"), nullable=True)
+    kind = Column(String(50), nullable=False)  # definition | metric | dimension
+    scope = Column(String(50), nullable=False)  # entity | table | column
+    target_name = Column(String(500), nullable=True)  # the table/column this defines
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    formula = Column(Text, nullable=True)  # for metrics
+    source_column = Column(String(255), nullable=True)  # for dimensions
+    source_table = Column(String(500), nullable=True)
+    confidence_score = Column(Float, nullable=True)
+    status = Column(String(50), nullable=False, default="proposed")  # proposed | accepted | rejected
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    proposal = relationship("ScanProposal", back_populates="glossary_entries")
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "proposal_id": self.proposal_id,
+            "entity_id": self.entity_id,
+            "kind": self.kind,
+            "scope": self.scope,
+            "target_name": self.target_name,
+            "name": self.name,
+            "description": self.description,
+            "formula": self.formula,
+            "source_column": self.source_column,
+            "source_table": self.source_table,
+            "confidence_score": self.confidence_score,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 class GlossaryVersion(Base):

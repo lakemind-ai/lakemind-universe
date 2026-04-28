@@ -2,16 +2,111 @@ import json
 import os
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
 from app.utils.app_db import get_db
-from app.models.scan import CatalogScan, DetectedEntity, DetectedTable, DetectedColumn
+from app.models.scan import CatalogScan, ScanProposal, DetectedEntity, DetectedTable, DetectedColumn
+from app.services import scan_service
 
 import logging
 logger = logging.getLogger(__name__)
 
 scan_router = APIRouter(tags=["Scan API"], prefix="/scan")
+
+
+# ── MindScan Schemas ─────────────────────────────────────────────────────────
+
+class MindScanRequest(BaseModel):
+    catalog: str
+    schema_names: list[str]
+    warehouse_id: str
+    model_endpoint: str
+
+
+class ProposalAcceptRequest(BaseModel):
+    edits: Optional[dict] = None
+
+
+class ProposalRejectRequest(BaseModel):
+    notes: Optional[str] = None
+
+
+# ── MindScan Endpoints ───────────────────────────────────────────────────────
+
+@scan_router.post("/mindscan/start")
+def start_mindscan(payload: MindScanRequest, db: Session = Depends(get_db)):
+    """Start a MindScan: AI-powered schema analysis with entity grouping and glossary proposals."""
+    try:
+        result = scan_service.start_scan(
+            catalog=payload.catalog,
+            schemas=payload.schema_names,
+            warehouse_id=payload.warehouse_id,
+            model_endpoint=payload.model_endpoint,
+            created_by="user",
+            db=db,
+        )
+        return {"status": "ok", "data": result}
+    except Exception as e:
+        logger.error(f"MindScan start failed: {e}")
+        raise HTTPException(status_code=500, detail=f"MindScan failed: {str(e)}")
+
+
+@scan_router.get("/mindscan/{scan_id}/status")
+def get_mindscan_status(scan_id: int, db: Session = Depends(get_db)):
+    """Get current MindScan status and progress."""
+    result = scan_service.get_scan_status(scan_id, db)
+    if not result:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    return {"status": "ok", "data": result}
+
+
+@scan_router.get("/mindscan/{scan_id}/proposals")
+def get_mindscan_proposals(scan_id: int, db: Session = Depends(get_db)):
+    """Get all AI proposals for a MindScan with nested glossary entries."""
+    proposals = scan_service.get_scan_proposals(scan_id, db)
+    return {"status": "ok", "data": proposals}
+
+
+@scan_router.post("/mindscan/{scan_id}/proposals/{proposal_id}/accept")
+def accept_mindscan_proposal(
+    scan_id: int,
+    proposal_id: int,
+    payload: ProposalAcceptRequest = ProposalAcceptRequest(),
+    db: Session = Depends(get_db),
+):
+    """Accept a MindScan proposal — persists entity and materializes glossary entries."""
+    result = scan_service.accept_proposal(
+        scan_id=scan_id,
+        proposal_id=proposal_id,
+        edits=payload.edits,
+        reviewed_by="user",
+        db=db,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    return {"status": "ok", "data": result}
+
+
+@scan_router.post("/mindscan/{scan_id}/proposals/{proposal_id}/reject")
+def reject_mindscan_proposal(
+    scan_id: int,
+    proposal_id: int,
+    payload: ProposalRejectRequest = ProposalRejectRequest(),
+    db: Session = Depends(get_db),
+):
+    """Reject a MindScan proposal."""
+    result = scan_service.reject_proposal(
+        scan_id=scan_id,
+        proposal_id=proposal_id,
+        notes=payload.notes,
+        reviewed_by="user",
+        db=db,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    return {"status": "ok", "data": result}
 
 DATABRICKS_HOST = os.getenv("DATABRICKS_HOST", "")
 if DATABRICKS_HOST and not DATABRICKS_HOST.startswith(("http://", "https://")):

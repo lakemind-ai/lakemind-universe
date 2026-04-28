@@ -15,7 +15,7 @@
     <meta name="importmap-type" content="systemjs-importmap" />
 
     <link
-      href="https://cdn.jsdelivr.net/npm/react-toastify@11.1.0/dist/ReactToastify.min.css"
+      href="https://cdn.jsdelivr.net/npm/react-toastify@10.0.5/dist/ReactToastify.min.css"
       rel="stylesheet"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -28,21 +28,22 @@
     <script type="systemjs-importmap">
       {
         "imports": {
-          "single-spa": "https://cdn.jsdelivr.net/npm/single-spa@6.0.3/lib/system/single-spa.min.js",
+          "single-spa": "https://cdn.jsdelivr.net/npm/single-spa@5.9.0/lib/system/single-spa.min.js",
           "react": "https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.development.js",
           "react-dom": "https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.development.js",
           "react-router-dom": "https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.3.4/react-router-dom.min.js",
           "history": "https://cdn.jsdelivr.net/npm/history@4.10.1/umd/history.min.js",
           "@emotion/react": "https://cdn.jsdelivr.net/npm/@emotion/react@11.14.0/dist/emotion-react.umd.min.js",
           "clsx": "https://cdn.jsdelivr.net/npm/clsx@2.1.1/dist/clsx.min.js",
-          "react-toastify": "https://cdn.jsdelivr.net/npm/react-toastify@11.1.0/dist/react-toastify.umd.js"
+          "react-toastify": "https://cdn.jsdelivr.net/npm/react-toastify@10.0.5/dist/react-toastify.umd.js"
         }
       }
     </script>
     <link
       rel="preload"
-      href="https://cdn.jsdelivr.net/npm/single-spa@6.0.3/lib/system/single-spa.min.js"
+      href="https://cdn.jsdelivr.net/npm/single-spa@5.9.0/lib/system/single-spa.min.js"
       as="script"
+      crossorigin="anonymous"
     />
 
     <% if (process.env.ROOT_APP_ENV === 'local') { %>
@@ -59,8 +60,8 @@
     <script type="systemjs-importmap">
       {
         "imports": {
-          "@lakemind/root-config": "//localhost:3000/lakemind-root-config.js",
-          "@lakemind/main-portal": "//localhost:8080/lakemind-main.js"
+          "@lakemind/root-config": "//localhost:3003/lakemind-root-config.js",
+          "@lakemind/main-portal": "//localhost:9090/lakemind-main.js"
         }
       }
     </script>
@@ -87,7 +88,7 @@
     <% } %>
 
     <link rel="apple-touch-icon" href="/logo.svg" />
-    <link rel="icon" href="/logo.svg" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   </head>
   <body class="h-screen">
     <noscript> You need to enable JavaScript to run this app. </noscript>

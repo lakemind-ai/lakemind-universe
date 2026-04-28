@@ -43,9 +43,9 @@ help:
 	@echo "  make help                Show this help message"
 	@echo ""
 	@echo "Ports:"
-	@echo "  Root Portal: http://localhost:3000"
-	@echo "  Main Portal: http://localhost:8080"
-	@echo "  API Service: http://localhost:8001"
+	@echo "  Root Portal: http://localhost:3003"
+	@echo "  Main Portal: http://localhost:9090"
+	@echo "  API Service: http://localhost:9000"
 	@echo "  Docs:        http://localhost:3002"
 	@echo ""
 
@@ -64,11 +64,11 @@ ui-dev: ui-install ui-start
 ui-start:
 	@echo "Starting all UI portals..."
 	@cd lakemind-root-portal && nohup yarn startlocal > /tmp/lakemind-root-portal.log 2>&1 & echo $$! > /tmp/lakemind-root-portal.pid
-	@echo "  Root portal started on port 3000 (PID: $$(cat /tmp/lakemind-root-portal.pid))"
+	@echo "  Root portal started on port 3003 (PID: $$(cat /tmp/lakemind-root-portal.pid))"
 	@cd lakemind-main-portal && nohup yarn startlocal > /tmp/lakemind-main-portal.log 2>&1 & echo $$! > /tmp/lakemind-main-portal.pid
-	@echo "  Main portal started on port 8080 (PID: $$(cat /tmp/lakemind-main-portal.pid))"
+	@echo "  Main portal started on port 9090 (PID: $$(cat /tmp/lakemind-main-portal.pid))"
 	@echo ""
-	@echo "Access: http://localhost:3000"
+	@echo "Access: http://localhost:3003"
 	@echo "Logs:"
 	@echo "  Root: /tmp/lakemind-root-portal.log"
 	@echo "  Main: /tmp/lakemind-main-portal.log"
@@ -80,14 +80,14 @@ ui-stop:
 		rm -f /tmp/lakemind-root-portal.pid; \
 		echo "  Root portal stopped"; \
 	else \
-		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
+		lsof -ti:3003 | xargs kill 2>/dev/null || true; \
 	fi
 	@if [ -f /tmp/lakemind-main-portal.pid ]; then \
 		kill $$(cat /tmp/lakemind-main-portal.pid) 2>/dev/null || true; \
 		rm -f /tmp/lakemind-main-portal.pid; \
 		echo "  Main portal stopped"; \
 	else \
-		lsof -ti:8080 | xargs kill 2>/dev/null || true; \
+		lsof -ti:9090 | xargs kill 2>/dev/null || true; \
 	fi
 	@echo "All portals stopped"
 
@@ -116,7 +116,7 @@ backend-setup-api:
 	@echo ""
 	@echo "Step 1: Creating Python virtual environment..."
 	@if [ ! -d "lakemind-api-service/venv" ]; then \
-		cd lakemind-api-service && python3 -m venv venv; \
+		cd lakemind-api-service && python3.14 -m venv venv; \
 		echo "  Virtual environment created"; \
 	else \
 		echo "  Virtual environment already exists"; \
@@ -127,7 +127,7 @@ backend-setup-api:
 	@echo "  pip upgraded"
 	@echo ""
 	@echo "Step 3: Installing dependencies..."
-	@cd lakemind-api-service && ./venv/bin/pip install -r requirements.txt --quiet
+	@cd lakemind-api-service && ./venv/bin/pip install -r requirements.txt
 	@echo ""
 	@echo "=============================================="
 	@echo "Backend setup complete!"
@@ -138,12 +138,12 @@ backend-setup-api:
 	@echo ""
 
 backend-start:
-	@echo "Starting API service on port 8001..."
-	@cd lakemind-api-service && ./venv/bin/python -m uvicorn app.main:app --reload --port 8001
+	@echo "Starting API service on port 9000..."
+	@cd lakemind-api-service && ./venv/bin/python -m uvicorn app.main:app --reload --port 9000
 
 backend-stop:
 	@echo "Stopping API service..."
-	@lsof -ti:8001 | xargs kill 2>/dev/null || true
+	@lsof -ti:9000 | xargs kill 2>/dev/null || true
 	@echo "API service stopped"
 
 # ============================================================================

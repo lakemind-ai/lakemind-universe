@@ -6,7 +6,7 @@ services:
     build: ./lakemind-root-portal
     ports:
       - "30:80"
-      - "3000:8000"
+      - "3003:8000"
     environment:
       - API_SERVICE_URL=${API_SERVICE_URL:-http://api-service:80/api/}
       - DATABRICKS_HOST=${DATABRICKS_HOST}
@@ -19,7 +19,7 @@ services:
     build: ./lakemind-main-portal
     ports:
       - "80:80"
-      - "8080:8000"
+      - "9090:8000"
 
   api-service:
     image: lakemind.ai/api-service:latest
@@ -36,4 +36,4 @@ services:
       - PGUSER=postgres
       - PGPASSWORD=postgres
     ports:
-      - "8001:80"
+      - "9000:80"

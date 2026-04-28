@@ -1,12 +1,14 @@
 import React from "react";
 import App from "./app";
 import { ToastContainer } from "react-toastify";
+import LoadingIndicator from "@/components/reusable/loading-indicator";
 import "./index.css";
 
 const Root = (props) => {
   return (
     <div>
       <App />
+      <LoadingIndicator />
       <ToastContainer
         position="bottom-left"
         autoClose={5000}

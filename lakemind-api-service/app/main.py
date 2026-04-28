@@ -15,6 +15,11 @@ from app.api.scan_route import scan_router
 from app.api.entity_route import entity_router
 from app.api.glossary_route import glossary_router
 from app.api.catalog_route import catalog_router
+from app.api.compute_route import compute_router
+from app.api.realm_route import realm_router
+from app.api.lexicon_route import lexicon_router
+from app.api.chronicle_route import chronicle_router
+from app.api.datalens_route import datalens_router
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
@@ -32,7 +37,12 @@ from app.utils.config_defaults import CONFIG_DEFAULTS
 from app.models.dbconfig import DBConfigProperties
 from app.models.scan import CatalogScan, DetectedEntity, DetectedTable, DetectedColumn
 from app.models.entity import GlossaryMetric, GlossaryDimension, GenieInstruction
-from app.models.glossary import GlossaryVersion, VersionChange, AuditEntry
+from app.models.glossary import GlossaryVersion, VersionChange, AuditEntry, GlossaryEntry
+from app.models.scan import ScanProposal
+from app.models.oidc_request import OIDCRequest
+from app.models.activity_log import ActivityLog
+from app.models.chat import ChatSession, ChatMessage
+from app.models.realm import Realm, RealmEntity
 
 
 logger.info("Starting LakeMind API Service")
@@ -123,6 +133,11 @@ app.include_router(scan_router, prefix=app_prefix)
 app.include_router(entity_router, prefix=app_prefix)
 app.include_router(glossary_router, prefix=app_prefix)
 app.include_router(catalog_router, prefix=app_prefix)
+app.include_router(compute_router, prefix=app_prefix)
+app.include_router(realm_router, prefix=app_prefix)
+app.include_router(lexicon_router, prefix=app_prefix)
+app.include_router(chronicle_router, prefix=app_prefix)
+app.include_router(datalens_router, prefix=app_prefix)
 
 logger.info("All API routes registered")
 

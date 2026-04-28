@@ -1,0 +1,648 @@
+{
+  "folders": [
+    {
+      "name": "Root",
+      "path": "."
+    },
+    {
+      "name": "Root Portal",
+      "path": "lakemind-root-portal"
+    },
+    {
+      "name": "Main Portal",
+      "path": "lakemind-main-portal"
+    },
+    {
+      "name": "API Service",
+      "path": "lakemind-api-service"
+    },
+    {
+      "name": "Docs",
+      "path": "lakemind-docs"
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
+    "python.terminal.activateEnvironment": true,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/node_modules": true,
+      "**/.git": true,
+      "**/venv": false,
+      "**/*.egg-info": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.debugpy",
+      "ms-python.vscode-pylance",
+      "ms-python.black-formatter",
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "bradlc.vscode-tailwindcss",
+      "ms-azuretools.vscode-docker"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "build-api-service",
+        "type": "shell",
+        "command": "source venv/bin/activate && pip install -r requirements.txt",
+        "options": {
+          "cwd": "${workspaceFolder:API Service}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "refresh-venv-api-service",
+        "type": "shell",
+        "command": "rm -rf venv && python3.14 -m venv venv && source venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt && pip install debugpy",
+        "options": {
+          "cwd": "${workspaceFolder:API Service}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "rebuild-api-service",
+        "type": "shell",
+        "command": "source venv/bin/activate && pip install -r requirements.txt",
+        "options": {
+          "cwd": "${workspaceFolder:API Service}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "run-migrations",
+        "type": "shell",
+        "command": "source venv/bin/activate && alembic upgrade head",
+        "options": {
+          "cwd": "${workspaceFolder:API Service}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "generate-migration",
+        "type": "shell",
+        "command": "source venv/bin/activate && alembic revision --autogenerate -m \"${input:migrationMessage}\"",
+        "options": {
+          "cwd": "${workspaceFolder:API Service}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "UI: Install All (via Makefile)",
+        "type": "shell",
+        "command": "make ui-install",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "UI: Build All (via Makefile)",
+        "type": "shell",
+        "command": "make ui-build",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "UI: Start All (via Makefile)",
+        "type": "shell",
+        "command": "make ui-start",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "UI: Stop All (via Makefile)",
+        "type": "shell",
+        "command": "make ui-stop",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "UI: Lint All (via Makefile)",
+        "type": "shell",
+        "command": "make ui-lint",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "start-root-portal",
+        "type": "shell",
+        "command": "yarn startlocal",
+        "options": {
+          "cwd": "${workspaceFolder:Root Portal}"
+        },
+        "isBackground": true,
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "start-main-portal",
+        "type": "shell",
+        "command": "yarn startlocal",
+        "options": {
+          "cwd": "${workspaceFolder:Main Portal}"
+        },
+        "isBackground": true,
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Start All UI (Individual Terminals)",
+        "dependsOn": [
+          "start-root-portal",
+          "start-main-portal"
+        ],
+        "group": "none",
+        "problemMatcher": []
+      },
+      {
+        "label": "start-api-service-debug",
+        "type": "shell",
+        "command": "source venv/bin/activate && python -m debugpy --listen 5678 -m uvicorn app.main:app --reload --port=9000",
+        "options": {
+          "cwd": "${workspaceFolder:API Service}"
+        },
+        "isBackground": true,
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated",
+          "group": "backend-services"
+        },
+        "problemMatcher": {
+          "pattern": { "regexp": "^$" },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*",
+            "endsPattern": "Uvicorn running on.*"
+          }
+        }
+      },
+      {
+        "label": "Backend: Setup (via Makefile)",
+        "type": "shell",
+        "command": "make backend-setup",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Backend: Start (via Makefile)",
+        "type": "shell",
+        "command": "make backend-start",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "isBackground": true,
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated"
+        },
+        "problemMatcher": {
+          "pattern": { "regexp": "^$" },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*",
+            "endsPattern": "Uvicorn running on.*"
+          }
+        }
+      },
+      {
+        "label": "Backend: Stop (via Makefile)",
+        "type": "shell",
+        "command": "make backend-stop",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Docs: Install (via Makefile)",
+        "type": "shell",
+        "command": "make docs-install",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Docs: Start (via Makefile)",
+        "type": "shell",
+        "command": "make docs-start",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Docs: Stop (via Makefile)",
+        "type": "shell",
+        "command": "make docs-stop",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Docs: Build (via Makefile)",
+        "type": "shell",
+        "command": "make docs-build",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "test-api-service",
+        "type": "shell",
+        "command": "source venv/bin/activate && pytest tests/ -v --tb=short",
+        "options": {
+          "cwd": "${workspaceFolder:API Service}"
+        },
+        "group": "test",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "test-api-service-coverage",
+        "type": "shell",
+        "command": "source venv/bin/activate && pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=html:../reports/coverage/api-service --cov-fail-under=80",
+        "options": {
+          "cwd": "${workspaceFolder:API Service}"
+        },
+        "group": "test",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "test-main-portal",
+        "type": "shell",
+        "command": "yarn test --watchAll=false",
+        "options": {
+          "cwd": "${workspaceFolder:Main Portal}"
+        },
+        "group": "test",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "test-main-portal-coverage",
+        "type": "shell",
+        "command": "yarn test --watchAll=false --coverage",
+        "options": {
+          "cwd": "${workspaceFolder:Main Portal}"
+        },
+        "group": "test",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Test All Backend",
+        "dependsOn": [
+          "test-api-service"
+        ],
+        "dependsOrder": "sequence",
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "Test All Frontend",
+        "dependsOn": [
+          "test-main-portal"
+        ],
+        "dependsOrder": "sequence",
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "Test All (Backend + Frontend)",
+        "dependsOn": [
+          "Test All Backend",
+          "Test All Frontend"
+        ],
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "Clean All (via Makefile)",
+        "type": "shell",
+        "command": "make clean",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Docker: Up",
+        "type": "shell",
+        "command": "docker compose up --build",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "isBackground": true,
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Docker: Down",
+        "type": "shell",
+        "command": "docker compose down",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Production Build (build.sh)",
+        "type": "shell",
+        "command": "./build.sh",
+        "options": {
+          "cwd": "${workspaceFolder:Root}"
+        },
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      }
+    ],
+    "inputs": [
+      {
+        "id": "migrationMessage",
+        "type": "promptString",
+        "description": "Enter Alembic migration message",
+        "default": "migration"
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug API Service",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": ["app.main:app", "--reload", "--port=9000"],
+        "python": "${workspaceFolder:API Service}/venv/bin/python",
+        "jinja": true,
+        "justMyCode": false,
+        "cwd": "${workspaceFolder:API Service}",
+        "envFile": "${workspaceFolder:API Service}/.env",
+        "console": "integratedTerminal"
+      },
+      {
+        "name": "Attach: API Service",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": { "host": "localhost", "port": 5678 },
+        "justMyCode": false,
+        "preLaunchTask": "start-api-service-debug"
+      },
+      {
+        "name": "Run API Service (Terminal)",
+        "type": "node-terminal",
+        "request": "launch",
+        "command": "source venv/bin/activate && python -m uvicorn app.main:app --reload --port=9000",
+        "cwd": "${workspaceFolder:API Service}"
+      },
+      {
+        "name": "Run Root Portal",
+        "type": "node-terminal",
+        "request": "launch",
+        "command": "yarn startlocal",
+        "cwd": "${workspaceFolder:Root Portal}"
+      },
+      {
+        "name": "Run Main Portal",
+        "type": "node-terminal",
+        "request": "launch",
+        "command": "yarn startlocal",
+        "cwd": "${workspaceFolder:Main Portal}"
+      },
+      {
+        "name": "Run Root Portal (Terminal)",
+        "type": "node-terminal",
+        "request": "launch",
+        "command": "yarn startlocal",
+        "cwd": "${workspaceFolder:Root Portal}",
+        "presentation": {
+          "group": "ui-portals",
+          "order": 1
+        }
+      },
+      {
+        "name": "Run Main Portal (Terminal)",
+        "type": "node-terminal",
+        "request": "launch",
+        "command": "yarn startlocal",
+        "cwd": "${workspaceFolder:Main Portal}",
+        "presentation": {
+          "group": "ui-portals",
+          "order": 2
+        }
+      },
+      {
+        "name": "Run Docs Server",
+        "type": "node-terminal",
+        "request": "launch",
+        "command": "yarn start --port 3002",
+        "cwd": "${workspaceFolder:Docs}"
+      }
+    ],
+    "compounds": [
+      {
+        "name": "Debug API Service Only",
+        "configurations": [
+          "Debug API Service"
+        ],
+        "stopAll": true
+      },
+      {
+        "name": "Run All Backend",
+        "configurations": [
+          "Run API Service (Terminal)"
+        ],
+        "stopAll": true
+      },
+      {
+        "name": "Run All UI",
+        "configurations": [
+          "Run Root Portal",
+          "Run Main Portal"
+        ],
+        "stopAll": true
+      },
+      {
+        "name": "Run All UI (Separate Terminals)",
+        "configurations": [
+          "Run Root Portal (Terminal)",
+          "Run Main Portal (Terminal)"
+        ],
+        "stopAll": true
+      },
+      {
+        "name": "Run Full Stack",
+        "configurations": [
+          "Run API Service (Terminal)",
+          "Run Root Portal (Terminal)",
+          "Run Main Portal (Terminal)"
+        ],
+        "stopAll": true
+      },
+      {
+        "name": "Debug Full Stack",
+        "configurations": [
+          "Debug API Service",
+          "Run Root Portal (Terminal)",
+          "Run Main Portal (Terminal)"
+        ],
+        "stopAll": true
+      }
+    ]
+  }
+}

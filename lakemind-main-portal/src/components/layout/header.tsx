@@ -52,13 +52,13 @@ export function Header({ navigation }: HeaderProps) {
     : "U";
 
   return (
-    <header className="shrink-0 h-14 bg-[#11151C] border-b border-[#232B38] flex items-center px-4 gap-6 z-10">
+    <header className="shrink-0 h-14 bg-white border-b border-[#E2E8F0] flex items-center px-4 gap-6 z-10">
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2 mr-2">
-        <div className="w-7 h-7 rounded-lg bg-[#5B7FE8] flex items-center justify-center">
+        <div className="w-7 h-7 rounded-lg bg-[#1E3A5F] flex items-center justify-center">
           <Brain className="w-4 h-4 text-white" />
         </div>
-        <span className="font-semibold text-[#E6EAF0] text-sm tracking-tight">LakeMind</span>
+        <span className="font-semibold text-[#1A2332] text-sm tracking-tight">LakeMind</span>
       </Link>
 
       {/* Nav tabs */}
@@ -72,8 +72,8 @@ export function Header({ navigation }: HeaderProps) {
               to={mod.href}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-[#5B7FE8]/15 text-[#5B7FE8]"
-                  : "text-[#A9B1BE] hover:bg-[#1A1F2B] hover:text-[#E6EAF0]"
+                  ? "bg-[#1E3A5F]/15 text-[#3B6B96]"
+                  : "text-[#4A5568] hover:bg-[#1A1F2B] hover:text-[#1A2332]"
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -88,14 +88,14 @@ export function Header({ navigation }: HeaderProps) {
         <div className="relative">
           <button
             onClick={() => setCatalogOpen(!catalogOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[#A9B1BE] hover:bg-[#1A1F2B] hover:text-[#E6EAF0] transition-colors border border-[#232B38]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-[#4A5568] hover:bg-[#1A1F2B] hover:text-[#1A2332] transition-colors border border-[#E2E8F0]"
           >
-            <span className="text-[#6B7589] text-xs">Catalog:</span>
-            <span className="text-[#E6EAF0]">{selectedCatalog}</span>
+            <span className="text-[#718096] text-xs">Catalog:</span>
+            <span className="text-[#1A2332]">{selectedCatalog}</span>
             <ChevronDown className="w-3 h-3" />
           </button>
           {catalogOpen && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-[#11151C] border border-[#232B38] rounded-lg shadow-xl z-50 py-1">
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-[#E2E8F0] rounded-lg shadow-xl z-50 py-1">
               {catalogs.map((cat) => (
                 <button
                   key={cat}
@@ -105,8 +105,8 @@ export function Header({ navigation }: HeaderProps) {
                   }}
                   className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                     cat === selectedCatalog
-                      ? "bg-[#5B7FE8]/10 text-[#5B7FE8]"
-                      : "text-[#A9B1BE] hover:bg-[#1A1F2B] hover:text-[#E6EAF0]"
+                      ? "bg-[#1E3A5F]/10 text-[#3B6B96]"
+                      : "text-[#4A5568] hover:bg-[#1A1F2B] hover:text-[#1A2332]"
                   }`}
                 >
                   {cat}
@@ -121,17 +121,17 @@ export function Header({ navigation }: HeaderProps) {
       <div className="flex items-center gap-3">
         {user && (
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#5B7FE8]/20 text-[#5B7FE8] flex items-center justify-center text-xs font-semibold">
+            <div className="w-7 h-7 rounded-full bg-[#1E3A5F]/20 text-[#3B6B96] flex items-center justify-center text-xs font-semibold">
               {initials}
             </div>
-            <span className="hidden sm:block text-sm text-[#A9B1BE]">
+            <span className="hidden sm:block text-sm text-[#4A5568]">
               {user.email || user.username}
             </span>
           </div>
         )}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 text-sm text-[#6B7589] hover:text-[#E6EAF0] transition-colors"
+          className="flex items-center gap-1.5 text-sm text-[#718096] hover:text-[#1A2332] transition-colors"
         >
           <LogOut className="w-4 h-4" />
         </button>

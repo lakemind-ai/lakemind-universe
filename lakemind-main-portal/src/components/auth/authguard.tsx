@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { isAuthenticated } from "@/lib/session";
+import { Loader } from "@/components/reusable/loader";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const history = useHistory();
@@ -16,8 +17,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!checked) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#0B0E14]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5B7FE8]" />
+      <div className="flex items-center justify-center h-screen bg-[#F5F7FA]">
+        <Loader size="medium" message="" />
       </div>
     );
   }

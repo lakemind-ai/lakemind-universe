@@ -252,6 +252,17 @@ def update_dimension(dimension_id: int, payload: DimensionUpdate, db: Session = 
     return {"status": "ok", "data": dimension.to_json()}
 
 
+# ── Definitions (GlossaryEntry) ──────────────────────────────────────────────
+
+@entity_router.get("/entities/{entity_id}/definitions")
+def get_entity_definitions(entity_id: int, db: Session = Depends(get_db)):
+    from app.models.glossary import GlossaryEntry
+    entries = db.query(GlossaryEntry).filter(
+        GlossaryEntry.entity_id == entity_id,
+    ).all()
+    return {"status": "ok", "data": [e.to_json() for e in entries]}
+
+
 # ── AI Propose ───────────────────────────────────────────────────────────────
 
 @entity_router.post("/entities/{entity_id}/ai-propose")
@@ -399,7 +410,56 @@ Respond ONLY with JSON, no markdown:
         raise HTTPException(status_code=500, detail=f"AI propose failed: {str(e)}")
 
 
-# ── AI Refine (Scoped Chat) ─────────────────────────────────────────────────
+# ── AI Chat ─────────────────────────────────────────────────────────────────
+
+class AiChatRequest(BaseModel):
+    message: str
+    warehouse_id: str
+    model_endpoint: str
+    session_id: Optional[int] = None
+
+
+@entity_router.post("/entities/{entity_id}/ai-chat")
+def ai_chat(entity_id: int, payload: AiChatRequest, db: Session = Depends(get_db)):
+    """Scoped AI chat for an entity — propose metrics, dimensions, and glossary via conversation."""
+    from app.services import chat_service
+
+    entity = db.query(DetectedEntity).filter(DetectedEntity.id == entity_id).first()
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    result = chat_service.send_message(
+        entity_id=entity_id,
+        message=payload.message,
+        session_id=payload.session_id,
+        warehouse_id=payload.warehouse_id,
+        model_endpoint=payload.model_endpoint,
+        created_by="user",
+        db=db,
+    )
+    return {"status": "ok", "data": result}
+
+
+@entity_router.get("/entities/{entity_id}/chat-sessions")
+def list_chat_sessions(entity_id: int, db: Session = Depends(get_db)):
+    """List all chat sessions for an entity."""
+    from app.services import chat_service
+
+    return {"status": "ok", "data": chat_service.list_sessions(entity_id, db)}
+
+
+@entity_router.get("/entities/{entity_id}/chat-sessions/{session_id}")
+def get_chat_session(entity_id: int, session_id: int, db: Session = Depends(get_db)):
+    """Get a chat session with all messages."""
+    from app.services import chat_service
+
+    data = chat_service.get_session(entity_id, session_id, db)
+    if not data:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"status": "ok", "data": data}
+
+
+# ── AI Refine (Legacy) ──────────────────────────────────────────────────────
 
 class RefineRequest(BaseModel):
     message: str

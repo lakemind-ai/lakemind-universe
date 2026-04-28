@@ -20,9 +20,9 @@ Single-SPA microfrontend + microservices architecture.
 
 ```
 lakemind-universe/
-├── lakemind-root-portal/    # Single-SPA root config (orchestrator, port 3000)
-├── lakemind-main-portal/    # Main MFE — React + Tailwind (port 8080)
-├── lakemind-api-service/    # FastAPI backend (port 8001)
+├── lakemind-root-portal/    # Single-SPA root config (orchestrator, port 3003)
+├── lakemind-main-portal/    # Main MFE — React + Tailwind (port 9090)
+├── lakemind-api-service/    # FastAPI backend (port 9000)
 ├── lakemind-docs/           # Docusaurus documentation site
 ├── docker-compose.yml       # Container orchestration
 ├── Makefile                 # Local development commands
@@ -38,11 +38,11 @@ make backend-setup    # Python venv + dependencies
 make ui-install       # yarn install all portals
 
 # Daily development
-make backend-start    # API service on :8001
-make ui-start         # Root on :3000, Main on :8080
+make backend-start    # API service on :9000
+make ui-start         # Root on :3003, Main on :9090
 
 # Access the app
-open http://localhost:3000
+open http://localhost:3003
 ```
 
 ## Stack

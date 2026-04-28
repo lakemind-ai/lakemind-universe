@@ -13,8 +13,8 @@ EOF
 cat <<EOF > /usr/share/nginx/html/importmap.json
 {
   "imports": {
-    "@lakemind/root-config": "${ROOT_CONFIG_URL:-//localhost:3000/lakemind-root-config.js}",
-    "@lakemind/main-portal": "${MAIN_PORTAL_URL:-//localhost:8080/lakemind-main.js}"
+    "@lakemind/root-config": "${ROOT_CONFIG_URL:-//localhost:3003/lakemind-root-config.js}",
+    "@lakemind/main-portal": "${MAIN_PORTAL_URL:-//localhost:9090/lakemind-main.js}"
   }
 }
 EOF
