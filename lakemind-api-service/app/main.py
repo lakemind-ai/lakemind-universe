@@ -90,6 +90,12 @@ async def lifespan(app):
                 db.commit()
                 logger.info("Config seeded")
 
+                # Step 4: Recover stuck scans
+                from app.services.scan_service import recover_stuck_scans
+                recovered = recover_stuck_scans(db)
+                if recovered:
+                    logger.info(f"Recovered {recovered} stuck scan(s)")
+
         except Exception as e:
             logger.error(f"Startup error: {e}")
             raise

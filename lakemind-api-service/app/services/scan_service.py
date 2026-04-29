@@ -352,6 +352,18 @@ def _fallback_grouping(tables_metadata: list[dict]) -> list[dict]:
     ]
 
 
+def recover_stuck_scans(db: Session) -> int:
+    """Mark any 'scanning' scans as failed — called on startup to recover from server restarts."""
+    stuck = db.query(CatalogScan).filter(CatalogScan.status == "scanning").all()
+    for scan in stuck:
+        scan.status = "failed"
+        scan.status_message = "Server restarted during scan. Please retry."
+        logger.warning(f"[MindScan {scan.id}] Marked as failed (stuck after restart)")
+    if stuck:
+        db.commit()
+    return len(stuck)
+
+
 def get_scan_status(scan_id: int, db: Session) -> dict:
     """Get current scan status and progress."""
     scan = db.query(CatalogScan).filter(CatalogScan.id == scan_id).first()
