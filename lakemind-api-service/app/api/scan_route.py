@@ -62,6 +62,15 @@ def get_mindscan_status(scan_id: int, db: Session = Depends(get_db)):
     return {"status": "ok", "data": result}
 
 
+@scan_router.post("/mindscan/{scan_id}/retry")
+def retry_mindscan(scan_id: int, db: Session = Depends(get_db)):
+    """Retry a failed MindScan."""
+    result = scan_service.retry_scan(scan_id, db)
+    if not result:
+        raise HTTPException(status_code=400, detail="Scan not found or not in failed state")
+    return {"status": "ok", "data": result}
+
+
 @scan_router.get("/mindscan/{scan_id}/proposals")
 def get_mindscan_proposals(scan_id: int, db: Session = Depends(get_db)):
     """Get all AI proposals for a MindScan with nested glossary entries."""

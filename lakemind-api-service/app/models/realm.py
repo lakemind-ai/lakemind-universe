@@ -14,6 +14,7 @@ class Realm(Base):
     status = Column(String(50), nullable=False, default="draft")  # draft | published | archived
     genie_workspace_id = Column(String(255), nullable=True)
     genie_workspace_name = Column(String(255), nullable=True)
+    genie_deployed_version = Column(Integer, nullable=True)
     latest_version = Column(Integer, nullable=True)
     created_by = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -29,6 +30,7 @@ class Realm(Base):
             "status": self.status,
             "genie_workspace_id": self.genie_workspace_id,
             "genie_workspace_name": self.genie_workspace_name,
+            "genie_deployed_version": self.genie_deployed_version,
             "latest_version": self.latest_version,
             "entity_count": len(self.entities) if self.entities else 0,
             "entity_ids": [re.entity_id for re in self.entities] if self.entities else [],

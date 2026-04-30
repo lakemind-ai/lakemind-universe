@@ -98,6 +98,11 @@ const ScanService = {
     return res.data;
   },
 
+  retryMindScan: async (scanId: number): Promise<CatalogScan> => {
+    const res = await api.post(`/api/scan/mindscan/${scanId}/retry`);
+    return res.data;
+  },
+
   getMindScanProposals: async (scanId: number): Promise<ScanProposal[]> => {
     const res = await api.get(`/api/scan/mindscan/${scanId}/proposals`, undefined, false);
     return res.data || [];

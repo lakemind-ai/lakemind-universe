@@ -384,7 +384,7 @@ export function ScanPage() {
                           <p className="text-xs text-[#718096] mb-2">
                             {scan.schema_name || "All schemas"}
                           </p>
-                          {scan.status_message && isScanning && (
+                          {scan.status_message && (isScanning || scan.status === "failed") && (
                             <p className="text-xs text-[#3B6B96] italic">{scan.status_message}</p>
                           )}
                           <div className="flex items-center gap-4 text-xs text-[#A0AEC0]">
@@ -424,6 +424,22 @@ export function ScanPage() {
                         )}
                         {isScanning && (
                           <span className="text-xs text-[#3B6B96] font-medium">In progress...</span>
+                        )}
+                        {scan.status === "failed" && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await ScanService.retryMindScan(scan.id);
+                                toast.info("Retrying scan...");
+                                loadScanHistory();
+                              } catch {
+                                toast.error("Failed to retry scan");
+                              }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#1E3A5F] text-[#1E3A5F] text-xs font-medium hover:bg-[#1E3A5F]/5 transition-colors"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" /> Retry
+                          </button>
                         )}
                       </div>
                     </div>

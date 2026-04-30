@@ -96,3 +96,35 @@ def create_genie_space(
     except Exception as e:
         logger.error(f"Failed to create Genie space: {e}")
         return {"error": str(e)}
+
+
+def update_genie_space(
+    space_id: str,
+    display_name: str,
+    description: str,
+    table_identifiers: list[str],
+    token: str,
+    instructions: str = "",
+) -> dict:
+    """Update an existing Genie space's instructions and tables."""
+    serialized = _build_serialized_space(table_identifiers, instructions)
+
+    logger.info(f"Updating Genie space '{space_id}' with {len(table_identifiers)} tables")
+
+    try:
+        client = _get_client(token)
+        result = client.genie.update_space(
+            space_id=space_id,
+            serialized_space=serialized,
+            title=display_name,
+            description=description,
+        )
+        logger.info(f"Genie space updated: {space_id}")
+        return {
+            "space_id": space_id,
+            "display_name": display_name,
+            "url": f"{_get_host()}/genie/rooms/{space_id}",
+        }
+    except Exception as e:
+        logger.error(f"Failed to update Genie space: {e}")
+        return {"error": str(e)}

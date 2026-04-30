@@ -524,11 +524,76 @@ def create_genie_from_version(
         if realm:
             realm.genie_workspace_id = result.get("space_id")
             realm.genie_workspace_name = display_name
+            realm.genie_deployed_version = version.version_number
 
         log_activity(
             db, action="chronicle.create_genie", module="chronicle", actor="user",
             entity_type="version", entity_id=str(version.id),
             detail=f"Created Genie space '{display_name}' (space_id: {result.get('space_id')})",
+            source="manual",
+        )
+        db.commit()
+
+    return result
+
+
+def update_genie_from_version(
+    version_id: int,
+    token: str,
+    db: Session,
+) -> dict | None:
+    """Update the existing Genie space with instructions from a published version."""
+    from app.services.genie_service import update_genie_space
+
+    version = db.query(GlossaryVersion).filter(GlossaryVersion.id == version_id).first()
+    if not version or version.status != "published":
+        return None
+
+    summary = {}
+    if version.changes_summary:
+        try:
+            summary = json.loads(version.changes_summary)
+        except json.JSONDecodeError:
+            pass
+
+    realm_id = summary.get("realm_id")
+    realm_name = summary.get("realm_name", "")
+    instructions = summary.get("genie_instructions", "")
+    snapshot = summary.get("snapshot", [])
+
+    realm = db.query(Realm).filter(Realm.id == realm_id).first() if realm_id else None
+    if not realm or not realm.genie_workspace_id:
+        return {"error": "No existing Genie space found for this realm"}
+
+    # Get table identifiers
+    entity_ids = [re.entity_id for re in realm.entities]
+    from app.models.scan import DetectedTable
+    db_tables = db.query(DetectedTable).filter(
+        DetectedTable.entity_id.in_(entity_ids)
+    ).all()
+    table_identifiers = list(set(
+        f"{t.catalog}.{t.schema_name}.{t.table_name}" for t in db_tables
+    ))
+
+    display_name = f"LakeMind — {realm_name} (v{version.version_number})"
+    description = f"Powered by LakeMind glossary v{version.version_number} · {len(snapshot)} entries"
+
+    result = update_genie_space(
+        space_id=realm.genie_workspace_id,
+        display_name=display_name,
+        description=description,
+        table_identifiers=table_identifiers,
+        token=token,
+        instructions=instructions,
+    )
+
+    if "error" not in result:
+        realm.genie_deployed_version = version.version_number
+        realm.genie_workspace_name = display_name
+        log_activity(
+            db, action="chronicle.update_genie", module="chronicle", actor="user",
+            entity_type="version", entity_id=str(version.id),
+            detail=f"Updated Genie space to v{version.version_number}",
             source="manual",
         )
         db.commit()

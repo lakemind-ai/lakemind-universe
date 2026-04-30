@@ -60,6 +60,11 @@ const ChronicleService = {
     const res = await api.post(`/api/chronicle/versions/${versionId}/create-genie`, { warehouse_id: warehouseId });
     return res.data;
   },
+
+  updateGenie: async (versionId: number): Promise<{ space_id: string; display_name: string; url: string }> => {
+    const res = await api.post(`/api/chronicle/versions/${versionId}/update-genie`);
+    return res.data;
+  },
 };
 
 export default ChronicleService;

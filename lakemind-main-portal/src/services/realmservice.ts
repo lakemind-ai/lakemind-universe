@@ -7,6 +7,7 @@ export interface RealmSummary {
   status: string;
   genie_workspace_id: string | null;
   genie_workspace_name: string;
+  genie_deployed_version?: number;
   latest_version: number | null;
   entity_count: number;
   entity_ids: number[];

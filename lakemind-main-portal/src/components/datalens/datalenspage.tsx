@@ -820,9 +820,16 @@ export function DatalensPage() {
     RealmService.listRealms()
       .then((data) => {
         setRealms(data);
-        const withLens = data.find((r) => r.genie_workspace_id);
-        if (withLens) setSelectedRealmId(withLens.id);
-        else if (data.length > 0) setSelectedRealmId(data[0].id);
+        // Check URL for ?realm=N param
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlRealmId = urlParams.get("realm");
+        if (urlRealmId && data.find((r) => r.id === Number(urlRealmId))) {
+          setSelectedRealmId(Number(urlRealmId));
+        } else {
+          const withLens = data.find((r) => r.genie_workspace_id);
+          if (withLens) setSelectedRealmId(withLens.id);
+          else if (data.length > 0) setSelectedRealmId(data[0].id);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));

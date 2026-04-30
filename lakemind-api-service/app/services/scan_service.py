@@ -107,11 +107,9 @@ def _schedule_background_scan(
     warehouse_id: str,
     model_endpoint: str,
 ):
-    """Schedule a scan as a one-shot background job via APScheduler."""
-    from apscheduler.schedulers.background import BackgroundScheduler
+    """Run a scan in a background thread."""
+    import threading
     from app.utils.database import SessionLocal
-
-    scheduler = BackgroundScheduler()
 
     def run_scan_job():
         db = SessionLocal()
@@ -136,11 +134,10 @@ def _schedule_background_scan(
                 logger.exception(f"Background MindScan failed: {e}")
         finally:
             db.close()
-            scheduler.shutdown(wait=False)
 
-    scheduler.add_job(run_scan_job, trigger="date", id=f"mindscan_{scan_id}")
-    scheduler.start()
-    logger.info(f"[MindScan {scan_id}] Scheduled as background job ({schemas})")
+    thread = threading.Thread(target=run_scan_job, name=f"mindscan_{scan_id}", daemon=True)
+    thread.start()
+    logger.info(f"[MindScan {scan_id}] Started background thread ({schemas})")
 
 
 def _execute_scan(
@@ -362,6 +359,47 @@ def recover_stuck_scans(db: Session) -> int:
     if stuck:
         db.commit()
     return len(stuck)
+
+
+def retry_scan(scan_id: int, db: Session) -> dict | None:
+    """Retry a failed scan by resetting it and re-executing."""
+    scan = db.query(CatalogScan).filter(CatalogScan.id == scan_id).first()
+    if not scan or scan.status not in ("failed",):
+        return None
+
+    # Parse schemas from the stored schema_name
+    schemas = [s.strip() for s in scan.schema_name.split(",") if s.strip()]
+
+    # Reset scan state
+    scan.status = "scanning"
+    scan.status_message = "Retrying scan..."
+    scan.completed_at = None
+    scan.proposal_count = None
+    db.commit()
+
+    # Clear old entities, proposals, glossary entries for this scan
+    from app.models.glossary import GlossaryEntry
+    proposals = db.query(ScanProposal).filter(ScanProposal.scan_id == scan_id).all()
+    for p in proposals:
+        db.query(GlossaryEntry).filter(GlossaryEntry.proposal_id == p.id).delete()
+    db.query(ScanProposal).filter(ScanProposal.scan_id == scan_id).delete()
+
+    entities = db.query(DetectedEntity).filter(DetectedEntity.scan_id == scan_id).all()
+    for e in entities:
+        from app.models.scan import DetectedTable, DetectedColumn
+        tables = db.query(DetectedTable).filter(DetectedTable.entity_id == e.id).all()
+        for t in tables:
+            db.query(DetectedColumn).filter(DetectedColumn.table_id == t.id).delete()
+        db.query(DetectedTable).filter(DetectedTable.entity_id == e.id).delete()
+    db.query(DetectedEntity).filter(DetectedEntity.scan_id == scan_id).delete()
+    db.commit()
+
+    # Re-run
+    _schedule_background_scan(
+        scan.id, scan.catalog_name, schemas, scan.warehouse_id, scan.model_endpoint
+    )
+    db.refresh(scan)
+    return scan.to_json()
 
 
 def get_scan_status(scan_id: int, db: Session) -> dict:

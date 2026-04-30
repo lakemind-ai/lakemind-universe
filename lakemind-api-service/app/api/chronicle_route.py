@@ -76,6 +76,22 @@ def create_genie(version_id: int, payload: CreateGenieRequest, request: Request,
     return {"status": "ok", "data": data}
 
 
+@chronicle_router.post("/versions/{version_id}/update-genie")
+def update_genie(version_id: int, request: Request, db: Session = Depends(get_db)):
+    """Update existing Genie space with instructions from a published version."""
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
+    if not token:
+        raise HTTPException(status_code=401, detail="No authorization token provided")
+
+    data = chronicle_service.update_genie_from_version(version_id, token, db)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Version not found or not published")
+    if "error" in data:
+        raise HTTPException(status_code=502, detail=data.get("detail", data["error"]))
+    return {"status": "ok", "data": data}
+
+
 @chronicle_router.post("/versions/{version_id}/publish")
 def publish_version(version_id: int, db: Session = Depends(get_db)):
     """Publish a version — generates Genie instructions and marks as published."""
